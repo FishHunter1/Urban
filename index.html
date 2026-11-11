@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fix Carrera 33! – A Sustainability Game</title>
+<style>
+  :root{
+    --bg:#0f2a24; --card:#fffdf6; --ink:#1d2b28; --muted:#5f6f6a;
+    --green:#1f9d6b; --green-d:#157a52; --red:#d9483b; --amber:#f2b33d; --line:#e6e0cf;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(circle at 50% 0%,#1d4a3f 0%,var(--bg) 70%);
+    color:var(--ink); min-height:100vh; display:flex; justify-content:center; padding:14px;
+  }
+  .wrap{width:100%; max-width:560px}
+  .top{display:flex; justify-content:space-between; align-items:center; color:#d8efe6; margin-bottom:8px; font-weight:700}
+  .top .score{font-size:1.1rem}
+  .pill{background:rgba(255,255,255,.12); padding:4px 10px; border-radius:999px; font-size:.85rem}
+  .scene{border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.35); background:#9fd3e6}
+  .scene svg{display:block; width:100%; height:auto}
+  .meters{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:10px 0}
+  .meter{background:rgba(255,255,255,.1); border-radius:10px; padding:6px 4px; text-align:center; color:#d8efe6; font-size:.7rem; font-weight:600}
+  .meter .ic{font-size:1.1rem; display:block}
+  .bar{height:6px; background:rgba(255,255,255,.18); border-radius:4px; margin-top:4px; overflow:hidden}
+  .bar i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--amber),#4fd69c); transition:width .6s}
+  .card{background:var(--card); border-radius:16px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .mission{font-size:.75rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--green-d)}
+  h1{font-size:1.7rem; margin:.2em 0 .3em; line-height:1.15}
+  h2{font-size:1.2rem; margin:.3em 0 .8em; line-height:1.3}
+  p{line-height:1.45; margin:.4em 0}
+  .timer{height:8px; background:var(--line); border-radius:6px; overflow:hidden; margin-bottom:12px}
+  .timer i{display:block; height:100%; width:100%; background:var(--green); transition:width .1s linear}
+  .opts{display:grid; gap:9px}
+  button{font:inherit; cursor:pointer}
+  .opt{
+    text-align:left; padding:13px 14px; border-radius:12px; border:2px solid var(--line);
+    background:#fff; font-size:1rem; color:var(--ink); transition:transform .08s, border-color .15s;
+  }
+  .opt:hover:not(:disabled){border-color:var(--green); transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt.ok{background:#dff5ea; border-color:var(--green); font-weight:700}
+  .opt.bad{background:#fbe2df; border-color:var(--red)}
+  .fb{margin-top:12px; padding:12px; border-radius:12px; font-size:.95rem; display:none}
+  .fb.show{display:block}
+  .fb.ok{background:#e9f8f0; border-left:5px solid var(--green)}
+  .fb.bad{background:#fdeeed; border-left:5px solid var(--red)}
+  .big{
+    display:block; width:100%; margin-top:14px; padding:14px; border:none; border-radius:12px;
+    background:var(--green); color:#fff; font-size:1.05rem; font-weight:800;
+  }
+  .big:hover{background:var(--green-d)}
+  input{width:100%; padding:12px; border-radius:10px; border:2px solid var(--line); font:inherit; margin-top:8px}
+  .rules{background:#f3efe2; border-radius:12px; padding:10px 14px; font-size:.92rem; margin:10px 0}
+  .rules li{margin:3px 0}
+  .final-score{font-size:3rem; font-weight:900; color:var(--green-d); text-align:center; margin:.1em 0}
+  .rank{text-align:center; font-size:1.25rem; font-weight:800}
+  .center{text-align:center}
+  .streak{color:var(--amber)}
+  .pop{animation:pop .35s}
+  @keyframes pop{0%{transform:scale(.96);opacity:.4}100%{transform:scale(1);opacity:1}}
+  .shake{animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+  .fade{transition:opacity .8s}
+  .car-move{animation:drive 6s linear infinite}
+  .car-move2{animation:drive 9s linear infinite; animation-delay:-4s}
+  @keyframes drive{from{transform:translateX(-80px)}to{transform:translateX(440px)}}
+  .wave{animation:wave 1.2s ease-out infinite}
+  @keyframes wave{0%{opacity:.9; transform:scale(.6)}100%{opacity:0; transform:scale(1.4)}}
+  .smog{animation:float 5s ease-in-out infinite alternate}
+  @keyframes float{to{transform:translateX(12px)}}
+  .mute{background:none;border:none;color:#d8efe6;font-size:1.1rem}
+  footer{color:#9cc2b5; font-size:.75rem; text-align:center; margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="pill" id="progress">Carrera 33 · Cabecera</span>
+    <span>
+      <span class="score" id="score">⭐ 0</span>
+      <button class="mute" id="mute" title="Sound on/off">🔊</button>
+    </span>
+  </div>
+
+  <div class="scene">
+    <svg viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" aria-label="Carrera 33 street">
+      <defs>
+        <radialGradient id="glow"><stop offset="0" stop-color="#fff6b0" stop-opacity=".95"/><stop offset="1" stop-color="#fff6b0" stop-opacity="0"/></radialGradient>
+      </defs>
+      <!-- sky -->
+      <rect id="sky" width="360" height="190" fill="#8fcbe0"/>
+      <rect id="skyDirty" class="fade" width="360" height="190" fill="#9c9786" opacity="1"/>
+      <circle cx="310" cy="30" r="16" fill="#ffd95a" opacity=".9"/>
+      <!-- buildings -->
+      <g>
+        <rect x="8" y="55" width="52" height="80" fill="#e8c9a0"/><rect x="62" y="35" width="44" height="100" fill="#cfd8dc"/>
+        <rect x="108" y="62" width="58" height="73" fill="#f0a868"/><rect x="168" y="28" width="40" height="107" fill="#b0bec5"/>
+        <rect x="210" y="50" width="56" height="85" fill="#e6b8a2"/><rect x="268" y="66" width="44" height="69" fill="#d7ccc8"/>
+        <rect x="314" y="44" width="40" height="91" fill="#c5cae9"/>
+        <g fill="#fdf3d0" opacity=".85">
+          <rect x="16" y="66" width="10" height="10"/><rect x="38" y="66" width="10" height="10"/><rect x="16" y="90" width="10" height="10"/><rect x="38" y="90" width="10" height="10"/>
+          <rect x="70" y="46" width="9" height="9"/><rect x="88" y="46" width="9" height="9"/><rect x="70" y="68" width="9" height="9"/><rect x="88" y="68" width="9" height="9"/><rect x="70" y="90" width="9" height="9"/><rect x="88" y="90" width="9" height="9"/>
+          <rect x="118" y="74" width="12" height="10"/><rect x="144" y="74" width="12" height="10"/>
+          <rect x="176" y="40" width="8" height="8"/><rect x="192" y="40" width="8" height="8"/><rect x="176" y="60" width="8" height="8"/><rect x="192" y="60" width="8" height="8"/><rect x="176" y="80" width="8" height="8"/><rect x="192" y="80" width="8" height="8"/>
+          <rect x="220" y="62" width="11" height="10"/><rect x="244" y="62" width="11" height="10"/><rect x="220" y="86" width="11" height="10"/><rect x="244" y="86" width="11" height="10"/>
+          <rect x="322" y="56" width="9" height="9"/><rect x="338" y="56" width="9" height="9"/><rect x="322" y="78" width="9" height="9"/><rect x="338" y="78" width="9" height="9"/>
+        </g>
+        <text x="113" y="122" font-size="8" font-weight="700" fill="#7a3f12">CAFÉ</text>
+        <text x="270" y="122" font-size="7" font-weight="700" fill="#5d4037">CLINIC</text>
+      </g>
+      <!-- trees (appear as city improves) -->
+      <g id="trees" class="fade" opacity="0">
+        <rect x="58" y="120" width="4" height="16" fill="#6d4c41"/><circle cx="60" cy="116" r="10" fill="#3fae6b"/>
+        <rect x="204" y="120" width="4" height="16" fill="#6d4c41"/><circle cx="206" cy="116" r="10" fill="#3fae6b"/>
+        <rect x="310" y="120" width="4" height="16" fill="#6d4c41"/><circle cx="312" cy="116" r="10" fill="#3fae6b"/>
+      </g>
+      <!-- sidewalk + road -->
+      <rect y="135" width="360" height="10" fill="#cfc7b5"/>
+      <rect y="145" width="360" height="45" fill="#4a4f55"/>
+      <g fill="#f5f5f5"><rect x="10" y="166" width="22" height="3"/><rect x="60" y="166" width="22" height="3"/><rect x="110" y="166" width="22" height="3"/><rect x="160" y="166" width="22" height="3"/><rect x="210" y="166" width="22" height="3"/><rect x="260" y="166" width="22" height="3"/><rect x="310" y="166" width="22" height="3"/></g>
+      <!-- street vendors / blocked sidewalk (traffic problem) -->
+      <g id="vendors" class="fade">
+        <rect x="140" y="128" width="20" height="10" fill="#ff8a65"/><rect x="138" y="124" width="24" height="4" fill="#e53935"/>
+        <rect x="236" y="127" width="26" height="12" fill="#90a4ae"/><text x="238" y="135" font-size="5" fill="#fff">LOADING</text>
+      </g>
+      <!-- lamps -->
+      <g>
+        <rect x="95" y="100" width="2.5" height="36" fill="#37474f"/><rect x="95" y="100" width="10" height="2.5" fill="#37474f"/>
+        <rect x="282" y="100" width="2.5" height="36" fill="#37474f"/><rect x="282" y="100" width="10" height="2.5" fill="#37474f"/>
+        <g id="lamps" class="fade" opacity="0">
+          <circle cx="104" cy="106" r="22" fill="url(#glow)"/><circle cx="291" cy="106" r="22" fill="url(#glow)"/>
+        </g>
+        <circle cx="104" cy="104" r="2.5" fill="#fff59d"/><circle cx="291" cy="104" r="2.5" fill="#fff59d"/>
+      </g>
+      <!-- bus stop + price -->
+      <g>
+        <rect x="20" y="118" width="30" height="18" fill="none" stroke="#1565c0" stroke-width="2"/>
+        <text x="22" y="115" font-size="6" font-weight="700" fill="#1565c0">METROLÍNEA</text>
+        <g id="priceHigh" class="fade"><rect x="18" y="98" width="38" height="11" rx="3" fill="#d9483b"/><text x="21" y="106" font-size="7" font-weight="800" fill="#fff">$3,600</text></g>
+        <g id="pricePass" class="fade" opacity="0"><rect x="18" y="98" width="38" height="11" rx="3" fill="#1f9d6b"/><text x="22" y="106" font-size="7" font-weight="800" fill="#fff">PASS ✓</text></g>
+      </g>
+      <!-- traffic light -->
+      <g>
+        <rect x="335" y="108" width="2.5" height="28" fill="#263238"/><rect x="330" y="96" width="12" height="16" rx="2" fill="#263238"/>
+        <circle id="tlRed" cx="336" cy="101" r="2.6" fill="#ff5252"/><circle id="tlGreen" cx="336" cy="107" r="2.6" fill="#37474f"/>
+      </g>
+      <!-- traffic jam -->
+      <g id="jam" class="fade">
+        <rect x="40" y="150" width="30" height="12" rx="3" fill="#e53935"/><rect x="76" y="150" width="30" height="12" rx="3" fill="#fbc02d"/>
+        <rect x="112" y="149" width="44" height="14" rx="3" fill="#1565c0"/><rect x="162" y="150" width="30" height="12" rx="3" fill="#8e24aa"/>
+        <rect x="198" y="150" width="30" height="12" rx="3" fill="#455a64"/><rect x="234" y="150" width="30" height="12" rx="3" fill="#ef6c00"/>
+        <rect x="270" y="171" width="30" height="12" rx="3" fill="#00897b"/><rect x="120" y="171" width="30" height="12" rx="3" fill="#c62828"/>
+        <text x="160" y="146" font-size="7" font-weight="800" fill="#ffeb3b">JAM!</text>
+      </g>
+      <!-- flowing cars -->
+      <g id="flow" class="fade" opacity="0">
+        <g class="car-move"><rect x="0" y="150" width="34" height="12" rx="3" fill="#1f9d6b"/><circle cx="7" cy="163" r="2.5" fill="#222"/><circle cx="27" cy="163" r="2.5" fill="#222"/></g>
+        <g class="car-move2"><rect x="0" y="172" width="44" height="13" rx="3" fill="#1565c0"/><circle cx="8" cy="186" r="2.5" fill="#222"/><circle cx="36" cy="186" r="2.5" fill="#222"/></g>
+      </g>
+      <!-- noise -->
+      <g id="noise" class="fade">
+        <g transform="translate(180,140)"><circle class="wave" r="18" fill="none" stroke="#ffeb3b" stroke-width="2"/></g>
+        <text x="60" y="146" font-size="9" font-weight="900" fill="#ffeb3b">BEEP!</text>
+        <text x="250" y="146" font-size="9" font-weight="900" fill="#ffeb3b">VRRR!</text>
+      </g>
+      <!-- smog -->
+      <g id="smog" class="fade">
+        <g class="smog" fill="#6b6b63" opacity=".75">
+          <ellipse cx="80" cy="30" rx="40" ry="14"/><ellipse cx="120" cy="24" rx="30" ry="12"/>
+          <ellipse cx="220" cy="34" rx="44" ry="15"/><ellipse cx="260" cy="26" rx="28" ry="11"/>
+          <ellipse cx="160" cy="140" rx="60" ry="8" opacity=".6"/>
+        </g>
+      </g>
+      <!-- darkness -->
+      <rect id="night" class="fade" width="360" height="190" fill="#0b1630" opacity=".35" pointer-events="none"/>
+    </svg>
+  </div>
+
+  <div class="meters">
+    <div class="meter"><span class="ic">🌫️</span>Air<div class="bar"><i id="m-air"></i></div></div>
+    <div class="meter"><span class="ic">🔇</span>Quiet<div class="bar"><i id="m-noise"></i></div></div>
+    <div class="meter"><span class="ic">🚌</span>Fares<div class="bar"><i id="m-cost"></i></div></div>
+    <div class="meter"><span class="ic">💡</span>Safety<div class="bar"><i id="m-safety"></i></div></div>
+    <div class="meter"><span class="ic">🚦</span>Traffic<div class="bar"><i id="m-traffic"></i></div></div>
+  </div>
+
+  <div class="card" id="card"></div>
+  <footer>English Final Project · Sustainable Urban Development in Carrera 33, Bucaramanga</footer>
+</div>
+
+<script>
+const QUESTIONS = [
+  {m:"Warm-up", key:null, q:"What is sustainability?",
+   o:["Meeting today's needs without harming the future","Building as many roads as possible","Using only electric cars","Making the city bigger every year"], a:0,
+   ex:"Sustainability balances the environment, people and the economy."},
+
+  {m:"Mission 1 · Air pollution", key:"air", q:"Exhaust from heavy traffic is making the air dirty. What is the best solution?",
+   o:["Plant one tree at the corner","A low-emission zone: the most polluting vehicles pay to enter","Close all the windows","Paint the buses green"], a:1,
+   ex:"A low-emission zone, with rewards for electric and clean vehicles, as a small pilot in Cabecera."},
+  {m:"Mission 1 · Air pollution", key:"air", q:"In London's ULEZ, traffic pollution (NO₂) in the centre is ___ lower than it would have been.",
+   o:["5%","20%","46%","90%"], a:2,
+   ex:"London, UK: NO₂ is 46% lower in the centre (London City Hall)."},
+
+  {m:"Mission 2 · Noise", key:"noise", q:"Engines, horns and loud motorbikes disturb homes, clinics and schools. What do we propose?",
+   o:["Noise cameras that spot very loud vehicles: warn first, then fine","Give every driver a louder horn","Move the clinics out of the city","Ban music in restaurants"], a:0,
+   ex:"One noise sensor as a pilot on Carrera 33, warning drivers before any fines."},
+  {m:"Mission 2 · Noise", key:"noise", q:"Which city tested 'Méduse' sensors (microphones + a camera) to catch loud vehicles?",
+   o:["Tokyo","Paris","Madrid","Lima"], a:1,
+   ex:"Paris, France tested the 'Méduse' noise radar."},
+
+  {m:"Mission 3 · Transport costs", key:"cost", q:"How much did bus and Metrolínea fares rise in 2026?",
+   o:["1–2%","11–20%","50–60%","They didn't change"], a:1,
+   ex:"Fares rose 11–20% in 2026 — now COP 3,000–3,600 (Vanguardia)."},
+  {m:"Mission 3 · Transport costs", key:"cost", q:"Germany sold a €9 monthly ticket in 2022. How many were sold in 3 months?",
+   o:["52 thousand","5 million","52 million","500 million"], a:2,
+   ex:"52 million tickets, saving about 1.8 million tonnes of CO₂. Our idea: one low-price monthly pass, paid with the Metrolínea app."},
+
+  {m:"Mission 4 · Insecurity", key:"safety", q:"Cabecera has many street thefts. Dark corners and crowded sidewalks help thieves. What helps most?",
+   o:["Brighter LED street lights and clear, open sidewalks","Higher walls around every house","Closing the bus stops at night","Turning off the lights to save energy"], a:0,
+   ex:"LED lights at dark corners and bus stops, plus teamwork with Cabecera's neighborhood security front."},
+  {m:"Mission 4 · Insecurity", key:"safety", q:"In a New York City trial, extra street lights cut serious night-time outdoor crime by at least…",
+   o:["3%","15%","36%","80%"], a:2,
+   ex:"At least 36% (NBER, 2019)."},
+
+  {m:"Mission 5 · Traffic", key:"traffic", q:"Badly parked cars, vendors and loading trucks block the lanes. What is our solution?",
+   o:["Add one more lane for cars","Smart traffic lights + clear loading hours and zones","Honk more to move faster","Ban all buses"], a:1,
+   ex:"A pilot at a few busy intersections with time-limited loading zones."},
+  {m:"Mission 5 · Traffic", key:"traffic", q:"With Pittsburgh's smart lights ('Surtrac'), travel times in the pilot area fell about…",
+   o:["25%","2%","60%","100%"], a:0,
+   ex:"About 25% shorter trips and about 21% fewer emissions."},
+
+  {m:"Final question", key:null, q:"Complete our motto: \"Every idea starts as a small ___: try it, measure the results, then grow.\"",
+   o:["law","pilot","party","tax"], a:1,
+   ex:"Better together: cheaper buses + smoother traffic = less exhaust, less noise and safer sidewalks."}
+];
+
+const TIME = 15;
+const meters = {air:0, noise:0, cost:0, safety:0, traffic:0};
+let i = 0, score = 0, streak = 0, correct = 0, name = "", timerId = null, tLeft = TIME, sound = true;
+const card = document.getElementById("card");
+const $ = id => document.getElementById(id);
+
+/* --- sound --- */
+let ac = null;
+function beep(freqs, dur=0.12){
+  if(!sound) return;
+  try{
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f,k)=>{
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type="triangle"; o.frequency.value=f; o.connect(g); g.connect(ac.destination);
+      const t = ac.currentTime + k*dur;
+      g.gain.setValueAtTime(.15,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
+      o.start(t); o.stop(t+dur);
+    });
+  }catch(e){}
+}
+$("mute").onclick = () => { sound = !sound; $("mute").textContent = sound ? "🔊" : "🔇"; };
+
+/* --- scene --- */
+function updateScene(){
+  const v = k => meters[k]/100;
+  $("skyDirty").setAttribute("opacity", (1 - v("air")).toFixed(2));
+  $("smog").setAttribute("opacity", (1 - v("air")).toFixed(2));
+  $("noise").setAttribute("opacity", (1 - v("noise")).toFixed(2));
+  $("priceHigh").setAttribute("opacity", (1 - v("cost")).toFixed(2));
+  $("pricePass").setAttribute("opacity", v("cost").toFixed(2));
+  $("lamps").setAttribute("opacity", v("safety").toFixed(2));
+  $("night").setAttribute("opacity", (0.35*(1 - v("safety"))).toFixed(2));
+  $("jam").setAttribute("opacity", (1 - v("traffic")).toFixed(2));
+  $("vendors").setAttribute("opacity", (1 - v("traffic")).toFixed(2));
+  $("flow").setAttribute("opacity", v("traffic").toFixed(2));
+  $("tlGreen").setAttribute("fill", v("traffic") > .4 ? "#4fd69c" : "#37474f");
+  $("tlRed").setAttribute("fill", v("traffic") > .4 ? "#37474f" : "#ff5252");
+  const avg = Object.values(meters).reduce((a,b)=>a+b,0)/500;
+  $("trees").setAttribute("opacity", avg.toFixed(2));
+  $("m-air").style.width = meters.air+"%"; $("m-noise").style.width = meters.noise+"%";
+  $("m-cost").style.width = meters.cost+"%"; $("m-safety").style.width = meters.safety+"%";
+  $("m-traffic").style.width = meters.traffic+"%";
+  $("score").textContent = "⭐ " + score;
+}
+
+/* --- screens --- */
+function start(){
+  card.innerHTML = `
+    <div class="mission">English Final Project</div>
+    <h1>Fix Carrera 33! 🏙️</h1>
+    <p>Carrera 33 in Cabecera is full of smog, noise, expensive buses, dark corners and traffic jams. Can you make it sustainable?</p>
+    <ul class="rules">
+      <li>12 quick questions · ${TIME} seconds each</li>
+      <li>Right answers clean up the street 🌳</li>
+      <li>Answer fast for bonus points ⚡ · keep a streak for more 🔥</li>
+    </ul>
+    <input id="nm" maxlength="20" placeholder="Your name (optional)">
+    <button class="big" id="go">Start ▶</button>`;
+  $("go").onclick = () => { name = $("nm").value.trim(); beep([523,659,784]); ask(); };
+  $("nm").onkeydown = e => { if(e.key==="Enter") $("go").click(); };
+}
+
+function ask(){
+  const Q = QUESTIONS[i];
+  $("progress").textContent = `Question ${i+1} / ${QUESTIONS.length}`;
+  card.innerHTML = `
+    <div class="mission">${Q.m}</div>
+    <h2>${Q.q}</h2>
+    <div class="timer"><i id="tbar"></i></div>
+    <div class="opts">${Q.o.map((t,k)=>`<button class="opt" data-k="${k}">${t}</button>`).join("")}</div>
+    <div class="fb" id="fb"></div>`;
+  card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+  card.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.k));
+  tLeft = TIME;
+  clearInterval(timerId);
+  timerId = setInterval(()=>{
+    tLeft -= 0.1;
+    const bar = $("tbar");
+    if(bar){ bar.style.width = Math.max(0,tLeft/TIME*100)+"%"; bar.style.background = tLeft < 5 ? "var(--red)" : "var(--green)"; }
+    if(tLeft <= 0) answer(-1);
+  },100);
+}
+
+function answer(k){
+  clearInterval(timerId);
+  const Q = QUESTIONS[i];
+  const btns = card.querySelectorAll(".opt");
+  btns.forEach(b => b.disabled = true);
+  btns[Q.a].classList.add("ok");
+  const fb = $("fb");
+  if(k === Q.a){
+    streak++; correct++;
+    const bonus = Math.round(Math.max(0,tLeft)/TIME*50);
+    const streakBonus = streak >= 3 ? 25 : 0;
+    const pts = 100 + bonus + streakBonus;
+    score += pts;
+    if(Q.key) meters[Q.key] = Math.min(100, meters[Q.key] + 50);
+    fb.className = "fb show ok";
+    fb.innerHTML = `<b>Correct! +${pts}</b> ${streak>=3?`<span class="streak">🔥 ${streak} in a row!</span>`:""}<br>${Q.ex}`;
+    beep([659,880]);
+  } else {
+    streak = 0;
+    if(k >= 0) btns[k].classList.add("bad");
+    fb.className = "fb show bad";
+    fb.innerHTML = `<b>${k<0?"Time's up! ⏰":"Not quite!"}</b><br>${Q.ex}`;
+    card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+    beep([220,165],0.15);
+  }
+  updateScene();
+  const next = document.createElement("button");
+  next.className = "big";
+  next.textContent = i < QUESTIONS.length-1 ? "Next ▶" : "See my results 🏆";
+  next.onclick = () => { i++; i < QUESTIONS.length ? ask() : finish(); };
+  card.appendChild(next);
+  next.focus();
+}
+
+function finish(){
+  $("progress").textContent = "Finished!";
+  const pct = correct / QUESTIONS.length;
+  let rank, msg;
+  if(pct >= .9){ rank="🏆 Mayor of Carrera 33"; msg="Amazing! The street is clean, quiet, safe and moving."; }
+  else if(pct >= .7){ rank="🌳 Green City Planner"; msg="Great job! Carrera 33 is much more sustainable."; }
+  else if(pct >= .5){ rank="🚌 Smart Commuter"; msg="Good work! A few more pilots and the street will shine."; }
+  else { rank="🚧 Pilot in Progress"; msg="Every idea starts as a small pilot. Try again!"; }
+  card.innerHTML = `
+    <div class="mission center">Your results${name?` · ${name.replace(/[<>&"]/g,"")}`:""}</div>
+    <div class="final-score">${score}</div>
+    <div class="rank">${rank}</div>
+    <p class="center">${correct} / ${QUESTIONS.length} correct · ${msg}</p>
+    <p class="center" style="color:var(--muted);font-size:.9rem">📸 Take a screenshot and show the class!</p>
+    <button class="big" id="again">Play again ↺</button>`;
+  beep([523,659,784,1047],0.14);
+  $("again").onclick = () => {
+    i=0; score=0; streak=0; correct=0;
+    Object.keys(meters).forEach(k=>meters[k]=0);
+    updateScene(); start();
+  };
+}
+
+updateScene();
+start();
+</script>
+</body>
+</html>
